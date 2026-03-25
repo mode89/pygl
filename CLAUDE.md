@@ -3,7 +3,7 @@ Use curl to perform interactive debugging through devdoor.
 
 ```bash
 # Start app
-python hello.py &
+python triangle.py &
 
 # Check devdoor is running
 curl http://localhost:8000/status
