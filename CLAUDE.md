@@ -1,4 +1,4 @@
-<debugging>
+<devdoor>
 Use curl to perform interactive debugging through devdoor.
 
 ```bash
@@ -19,4 +19,4 @@ EOF
 # Close app
 curl http://localhost:8000 -d "_quit(window)"
 ```
-</debugging>
+</devdoor>

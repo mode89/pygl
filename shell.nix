@@ -6,7 +6,7 @@ pkgs.mkShell {
       py.moderngl
       py.moderngl-window
       py.pillow
-      py.pyrr
+      py.pyglm
     ]))
   ];
 }

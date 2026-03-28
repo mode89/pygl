@@ -1,10 +1,19 @@
 # pylint: disable=missing-docstring
 
-import numpy as np # pylint: disable=import-error
 import moderngl_window as mglw # pylint: disable=import-error
-from pyrr import Matrix44 # pylint: disable=import-error
 
-import devdoor
+import paimel
+import gelpi as gl
+
+devdoor = paimel.load_module("devdoor")
+
+# Interleaved position (3f) + color (3f) per vertex
+# Triangle in the XZ plane (vertical), facing -Y toward the camera.
+TRIANGLE_VERTICES = [
+     0.0, 0.0,  0.5,   1.0, 0.0, 0.0,
+    -0.5, 0.0, -0.5,   0.0, 1.0, 0.0,
+     0.5, 0.0, -0.5,   0.0, 0.0, 1.0,
+]
 
 
 class Window(mglw.WindowConfig):
@@ -18,56 +27,35 @@ class Window(mglw.WindowConfig):
         self.devdoor = devdoor.create()
         self.should_close = False
 
-        vbo = self.ctx.buffer(np.array([
-             0.0,  0.5, 0.0,   1.0, 0.0, 0.0,
-            -0.5, -0.5, 0.0,   0.0, 1.0, 0.0,
-             0.5, -0.5, 0.0,   0.0, 0.0, 1.0,
-        ], dtype="f4"))
-
-        self.prog = self.ctx.program(
-            vertex_shader="""
-                #version 430
-                uniform mat4 mvp;
-                in vec3 in_position;
-                in vec3 in_color;
-                out vec3 v_color;
-                void main() {
-                    gl_Position = mvp * vec4(in_position, 1.0);
-                    v_color = in_color;
-                }
-            """,
-            fragment_shader="""
-                #version 430
-                in vec3 v_color;
-                out vec4 fragColor;
-                void main() {
-                    fragColor = vec4(v_color, 1.0);
-                }
-            """,
+        vbuf = gl.Buffer(self.ctx, TRIANGLE_VERTICES)
+        geom = gl.Geometry(
+            layout=(("in_position", "3f"), ("in_color", "3f")),
+            primitive=gl.TRIANGLES,
+            vertex_buffer=vbuf,
         )
-
-        self.vao = self.ctx.vertex_array(self.prog, [
-            (vbo, "3f 3f", "in_position", "in_color"),
-        ])
+        mat = gl.material(self.ctx, lit=False, vertex_color=True)
+        self.triangle = gl.drawable(self.ctx, geom, mat)
 
     def on_close(self):
         self.devdoor.close()
 
     def on_render(self, _time, _frame_time):
-        self.ctx.clear(0.0, 0.0, 0.0, 1.0)
-
-        projection = Matrix44.perspective_projection(
-            45.0, self.aspect_ratio, 0.1, 100.0)
-        view = Matrix44.look_at(
-            (0.0, 0.0, 2.0),
-            (0.0, 0.0, 0.0),
-            (0.0, 1.0, 0.0),
+        w, h = self.wnd.buffer_size
+        env = gl.Environment(
+            clear_color=(0.0, 0.0, 0.0, 1.0),
+            time=_time,
+            viewport=(0, 0, w, h),
         )
-        model = Matrix44.from_z_rotation(_time)
-        mvp = projection * view * model
-
-        self.prog["mvp"].write(mvp.astype("f4").tobytes())
-        self.vao.render()
+        camera = gl.Camera(
+            position=(0.0, -2.0, 0.0),
+            fov=45.0,
+            aspect=w / h,
+        )
+        scene = gl.Node(
+            transform=gl.Transform(rotation=(0.0, _time, 0.0)),
+            drawable=self.triangle,
+        )
+        gl.render(self.ctx, camera, env, scene)
 
         self.devdoor.exec_pending_requests(globals(), {"window": self})
 
