@@ -3,9 +3,8 @@
 import moderngl_window as mglw # pylint: disable=import-error
 
 import paimel
-import gelpi as gl
-
 devdoor = paimel.load_module("devdoor")
+gl = paimel.load_module("gelpi")
 
 # Interleaved position (3f) + color (3f) per vertex
 # Triangle in the XZ plane (vertical), facing -Y toward the camera.
@@ -31,9 +30,9 @@ class Window(mglw.WindowConfig):
         geom = gl.Geometry(
             layout=(("in_position", "3f"), ("in_color", "3f")),
             primitive=gl.TRIANGLES,
-            vertex_buffer=vbuf,
+            vertexBuffer=vbuf,
         )
-        mat = gl.material(self.ctx, lit=False, vertex_color=True)
+        mat = gl.material(self.ctx, lit=False, vertexColor=True)
         self.triangle = gl.drawable(self.ctx, geom, mat)
 
     def on_close(self):
@@ -42,7 +41,7 @@ class Window(mglw.WindowConfig):
     def on_render(self, _time, _frame_time):
         w, h = self.wnd.buffer_size
         env = gl.Environment(
-            clear_color=(0.0, 0.0, 0.0, 1.0),
+            clearColor=(0.0, 0.0, 0.0, 1.0),
             time=_time,
             viewport=(0, 0, w, h),
         )

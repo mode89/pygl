@@ -4,7 +4,7 @@ import moderngl_window as mglw # pylint: disable=import-error
 
 import paimel
 
-import gelpi as gl
+gl = paimel.load_module("gelpi")
 devdoor = paimel.load_module("devdoor")
 
 
@@ -70,7 +70,7 @@ class Window(mglw.WindowConfig):
         geom = gl.Geometry(
             layout=(("in_position", "3f"), ("in_normal", "3f")),
             primitive=gl.TRIANGLES,
-            vertex_buffer=vbuf,
+            vertexBuffer=vbuf,
         )
         mat = gl.material(self.ctx, color=(1.0, 0.0, 0.0, 1.0), lit=True)
         self.box = gl.drawable(self.ctx, geom, mat)
@@ -80,7 +80,7 @@ class Window(mglw.WindowConfig):
 
     def on_render(self, _time, _frame_time):
         env = gl.Environment(
-            clear_color=(0.0, 0.0, 0.0, 1.0),
+            clearColor=(0.0, 0.0, 0.0, 1.0),
             time=_time,
             ambient=(0.3, 0.3, 0.3),
             viewport=(0, 0, *self.wnd.buffer_size),

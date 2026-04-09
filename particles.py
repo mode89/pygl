@@ -8,7 +8,9 @@ from types import SimpleNamespace
 import moderngl_window as mglw  # pylint: disable=import-error
 import glm  # pylint: disable=import-error
 
-import gelpi as gl
+import paimel
+
+gl = paimel.load_module("gelpi")
 
 # Constants
 MAX_PARTICLES = 200
@@ -38,23 +40,23 @@ class Window(mglw.WindowConfig):
 
         self.screen_space = False
 
-        geom = gl.quad_geometry(self.ctx)
+        geom = gl.quadGeometry(self.ctx)
 
         # Dynamic instance buffer
         self.instance_buf = gl.Buffer(
             self.ctx, [0.0] * MAX_PARTICLES * 6, dynamic=True,
         )
-        self.instance_buf.size_bytes = 0
+        self.instance_buf.setSizeBytes(0)
 
         instancing = gl.Instancing(
             buffer=self.instance_buf,
             layout=(("in_offset", "3f"), ("in_color", "3f")),
         )
-        world_mat = gl.particle_material(self.ctx, size=WORLD_SIZE)
+        world_mat = gl.particleMaterial(self.ctx, size=WORLD_SIZE)
         self.world_drawable = gl.drawable(self.ctx, geom, world_mat, instancing)
 
-        screen_mat = gl.particle_material(
-            self.ctx, size=SCREEN_SIZE, screen_space=True,
+        screen_mat = gl.particleMaterial(
+            self.ctx, size=SCREEN_SIZE, screenSpace=True,
         )
         self.screen_drawable = gl.drawable(
             self.ctx, geom, screen_mat, instancing,
@@ -72,7 +74,7 @@ class Window(mglw.WindowConfig):
         self.particles.update(_frame_time)
 
         env = gl.Environment(
-            clear_color=(0.05, 0.02, 0.05, 1.0),
+            clearColor=(0.05, 0.02, 0.05, 1.0),
             time=_time,
             viewport=(0, 0, w, h),
         )
@@ -86,8 +88,8 @@ class Window(mglw.WindowConfig):
         # Upload instance data
         count = self.particles.count
         if count > 0:
-            self.instance_buf.update_bytes(self.particles.pack())
-        self.instance_buf.size_bytes = count * INSTANCE_STRIDE
+            self.instance_buf.updateBytes(self.particles.pack())
+        self.instance_buf.setSizeBytes(count * INSTANCE_STRIDE)
 
         drw = self.screen_drawable if self.screen_space else self.world_drawable
         gl.render(self.ctx, camera, env, gl.Node(drawable=drw))
