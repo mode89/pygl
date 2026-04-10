@@ -5,9 +5,9 @@ import random
 import struct
 from types import SimpleNamespace
 
-import moderngl_window as mglw  # pylint: disable=import-error
 import glm  # pylint: disable=import-error
 
+import window
 import paimel
 
 gl = paimel.load_module("gelpi")
@@ -27,72 +27,65 @@ COLOR_ORANGE = (1.0, 0.3, 0.0)
 INSTANCE_STRIDE = 24  # 6 floats * 4 bytes (3f pos + 3f color)
 
 
-class Window(mglw.WindowConfig):
-    gl_version = (4, 3)
-    title = "Particle Fountain"
-    window_size = (800, 600)
-    samples = 8
+def init(self):
+    self.particles = Particles()
+    self.screen_space = False
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    geom = gl.quadGeometry(self.ctx)
 
-        self.particles = Particles()
+    # Dynamic instance buffer
+    self.instance_buf = gl.Buffer(
+        self.ctx, [0.0] * MAX_PARTICLES * 6, dynamic=True,
+    )
+    self.instance_buf.setSizeBytes(0)
 
-        self.screen_space = False
+    instancing = gl.Instancing(
+        buffer=self.instance_buf,
+        layout=(("in_offset", "3f"), ("in_color", "3f")),
+    )
+    world_mat = gl.particleMaterial(self.ctx, size=WORLD_SIZE)
+    self.world_drawable = gl.drawable(self.ctx, geom, world_mat, instancing)
 
-        geom = gl.quadGeometry(self.ctx)
+    screen_mat = gl.particleMaterial(
+        self.ctx, size=SCREEN_SIZE, screenSpace=True,
+    )
+    self.screen_drawable = gl.drawable(
+        self.ctx, geom, screen_mat, instancing,
+    )
 
-        # Dynamic instance buffer
-        self.instance_buf = gl.Buffer(
-            self.ctx, [0.0] * MAX_PARTICLES * 6, dynamic=True,
-        )
-        self.instance_buf.setSizeBytes(0)
 
-        instancing = gl.Instancing(
-            buffer=self.instance_buf,
-            layout=(("in_offset", "3f"), ("in_color", "3f")),
-        )
-        world_mat = gl.particleMaterial(self.ctx, size=WORLD_SIZE)
-        self.world_drawable = gl.drawable(self.ctx, geom, world_mat, instancing)
+def render(self, _time, _frame_time):
+    w, h = self.wnd.buffer_size
+    aspect = w / h
 
-        screen_mat = gl.particleMaterial(
-            self.ctx, size=SCREEN_SIZE, screenSpace=True,
-        )
-        self.screen_drawable = gl.drawable(
-            self.ctx, geom, screen_mat, instancing,
-        )
+    # Update simulation
+    self.particles.update(_frame_time)
 
-    def on_key_event(self, key, action, _modifiers):
-        if action == self.wnd.keys.ACTION_PRESS and key == self.wnd.keys.SPACE:
-            self.screen_space = not self.screen_space
+    env = gl.Environment(
+        clearColor=(0.05, 0.02, 0.05, 1.0),
+        time=_time,
+        viewport=(0, 0, w, h),
+    )
+    camera = gl.Camera(
+        position=(0.0, -3.0, 3.0),
+        orientation=(0.0, -0.1, 0.0),
+        fov=90.0,
+        aspect=aspect,
+    )
 
-    def on_render(self, _time, _frame_time):
-        w, h = self.wnd.buffer_size
-        aspect = w / h
+    # Upload instance data
+    count = self.particles.count
+    if count > 0:
+        self.instance_buf.updateBytes(self.particles.pack())
+    self.instance_buf.setSizeBytes(count * INSTANCE_STRIDE)
 
-        # Update simulation
-        self.particles.update(_frame_time)
+    drw = self.screen_drawable if self.screen_space else self.world_drawable
+    gl.render(self.ctx, camera, env, gl.Node(drawable=drw))
 
-        env = gl.Environment(
-            clearColor=(0.05, 0.02, 0.05, 1.0),
-            time=_time,
-            viewport=(0, 0, w, h),
-        )
-        camera = gl.Camera(
-            position=(0.0, -3.0, 3.0),
-            orientation=(0.0, -0.1, 0.0),
-            fov=90.0,
-            aspect=aspect,
-        )
 
-        # Upload instance data
-        count = self.particles.count
-        if count > 0:
-            self.instance_buf.updateBytes(self.particles.pack())
-        self.instance_buf.setSizeBytes(count * INSTANCE_STRIDE)
-
-        drw = self.screen_drawable if self.screen_space else self.world_drawable
-        gl.render(self.ctx, camera, env, gl.Node(drawable=drw))
+def key_event(self, key, action, _modifiers):
+    if action == self.wnd.keys.ACTION_PRESS and key == self.wnd.keys.SPACE:
+        self.screen_space = not self.screen_space
 
 
 class Particles:
@@ -157,7 +150,7 @@ class Particles:
 
 
 def _poisson(mean):
-    L = math.exp(-mean) # pylint: disable=invalid-name
+    L = math.exp(-mean)  # pylint: disable=invalid-name
     k = 0
     p = 1.0
     while p > L:
@@ -175,5 +168,7 @@ def _particle():
     )
 
 
-if __name__ == "__main__":
-    mglw.run_window_config(Window)
+window.run(
+    init=init, render=render, key_event=key_event,
+    title="Particle Fountain",
+)
