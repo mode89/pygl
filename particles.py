@@ -7,10 +7,10 @@ from types import SimpleNamespace
 
 import glm  # pylint: disable=import-error
 
-import window
 import paimel
 
 gl = paimel.load_module("gelpi")
+window = paimel.load_module("window")
 
 # Constants
 MAX_PARTICLES = 200

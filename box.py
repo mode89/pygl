@@ -1,9 +1,9 @@
 # pylint: disable=missing-docstring
 
-import window
 import paimel
 
 gl = paimel.load_module("gelpi")
+window = paimel.load_module("window")
 
 # Interleaved position (3f) + normal (3f) per vertex
 CUBE_VERTICES = [

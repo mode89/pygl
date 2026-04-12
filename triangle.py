@@ -1,9 +1,9 @@
 # pylint: disable=missing-docstring
 
-import window
 import paimel
 
 gl = paimel.load_module("gelpi")
+window = paimel.load_module("window")
 
 # Interleaved position (3f) + color (3f) per vertex
 # Triangle in the XZ plane (vertical), facing -Y toward the camera.
@@ -28,7 +28,7 @@ def init(self):
 def render(self, _time, _frame_time):
     w, h = self.wnd.buffer_size
     env = gl.Environment(
-        clearColor=(0.0, 0.0, 0.0, 1.0),
+        clearColor=(0.0, 0.0, 0.0),
         time=_time,
         viewport=(0, 0, w, h),
     )
