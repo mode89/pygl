@@ -83,7 +83,7 @@ class Texture = {
 
 # --- Shaders ---
 
-def gelpiUbo = """
+def _GELPI_UBO = """
 layout(std140, binding = 0) uniform Gelpi {
     mat4 model;
     mat4 view;
@@ -100,10 +100,10 @@ layout(std140, binding = 0) uniform Gelpi {
 };
 """
 
-def vert = """
+def _VERT = """
 #version 430
 
-${gelpiUbo}
+${_GELPI_UBO}
 
 in vec3 in_position;
 in vec3 in_normal;
@@ -125,10 +125,10 @@ void main() {
 }
 """
 
-def frag = """
+def _FRAG = """
 #version 430
 
-${gelpiUbo}
+${_GELPI_UBO}
 
 uniform vec4 u_color;
 uniform int u_has_vertex_color;
@@ -169,10 +169,10 @@ void main() {
 }
 """
 
-def particleVert = """
+def _PARTICLE_VERT = """
 #version 430
 
-${gelpiUbo}
+${_GELPI_UBO}
 
 uniform float u_size;
 uniform bool u_screen_space;
@@ -213,51 +213,67 @@ void main() {
 
 def drawable ctx geom mat instancing:nil =
   Drawable geometry:geom material:mat instancing:*
-    vao:(buildVao ctx mat.shader geom instancing:*)
+    vao:(_buildVao ctx mat.shader geom instancing:*)
 
 def quadGeometry ctx =
   Geometry
     layout:[["in_position", "3f"], ["in_normal", "3f"], ["in_uv", "2f"]]
     primitive:TRIANGLES
-    vertexBuffer:(Buffer ctx [
+    vertexBuffer:(Buffer ctx (pack [
       -0.5, -0.5, 0.0,   0, 0, 1,   0, 0,
        0.5, -0.5, 0.0,   0, 0, 1,   1, 0,
        0.5,  0.5, 0.0,   0, 0, 1,   1, 1,
       -0.5,  0.5, 0.0,   0, 0, 1,   0, 1
-    ])
-    indexBuffer:(Buffer ctx [0, 1, 2, 2, 3, 0])
+    ]))
+    indexBuffer:(Buffer ctx (pack [0, 1, 2, 2, 3, 0]))
 
-def material ctx color:[1.0, 1.0, 1.0, 1.0] texture:nil lit:true vertexColor:false =
+def material
+  ctx
+  color:[1.0, 1.0, 1.0, 1.0]
+  texture:nil
+  lit:true
+  vertexColor:false =
   let prog =
     if py.hasattr ctx "_defaultProg" then ctx._defaultProg
     else
-      let p = ctx.program vertex_shader:vert fragment_shader:frag in
-      let _ = when contains? p "Gelpi" do set! p.("Gelpi").binding 0 in
-      set! ctx._defaultProg p
+      let p = ctx.program vertex_shader:_VERT fragment_shader:_FRAG in (
+        set! p.("Gelpi").binding 0;
+        set! ctx._defaultProg p
+      )
   in
   let color = if len color == 3 then conj (vec color) 1.0 else color in
   Material shader:prog texture:*
     uniforms:{
       u_color: color,
-      u_has_vertex_color: (if vertexColor then 1 else 0),
-      u_has_texture: (if some? texture then 1 else 0),
-      u_lit: (if lit then 1 else 0),
+      u_has_vertex_color: if vertexColor then 1 else 0,
+      u_has_texture: if some? texture then 1 else 0,
+      u_lit: if lit then 1 else 0,
     }
 
-def particleMaterial ctx color:[1.0, 1.0, 1.0, 1.0] texture:nil vertexColor:true size:1.0 screenSpace:false =
+def particleMaterial
+  ctx
+  color:[1.0, 1.0, 1.0, 1.0]
+  texture:nil
+  vertexColor:true
+  size:1.0
+  screenSpace:false =
   let prog =
     if py.hasattr ctx "_particleProg" then ctx._particleProg
     else
-      let p = ctx.program vertex_shader:particleVert fragment_shader:frag in
-      let _ = when contains? p "Gelpi" do set! p.("Gelpi").binding 0 in
-      set! ctx._particleProg p
+      let p = ctx.program
+        vertex_shader:_PARTICLE_VERT
+        fragment_shader:_FRAG
+      in (
+        set! p.("Gelpi").binding 0;
+        set! ctx._particleProg p
+      )
   in
   let color = if len color == 3 then conj (vec color) 1.0 else color in
   Material shader:prog texture:*
     uniforms:{
       u_color: color,
-      u_has_vertex_color: (if vertexColor then 1 else 0),
-      u_has_texture: (if some? texture then 1 else 0),
+      u_has_vertex_color: if vertexColor then 1 else 0,
+      u_has_texture: if some? texture then 1 else 0,
       u_lit: 0,
       u_size: size,
       u_screen_space: screenSpace,
@@ -265,15 +281,15 @@ def particleMaterial ctx color:[1.0, 1.0, 1.0, 1.0] texture:nil vertexColor:true
 
 # --- Transform math ---
 
-def transformMatrix t =
+def _transformMatrix t =
   let m = glm.mat4 () in
-  let m = glm.translate m (glm.vec3 $* t.translation) in
-  let m = glm.rotate m t.rotation.(2) (glm.vec3 0 0 1) in
-  let m = glm.rotate m t.rotation.(1) (glm.vec3 0 1 0) in
-  let m = glm.rotate m t.rotation.(0) (glm.vec3 1 0 0) in
-  glm.scale m (glm.vec3 $* t.scale)
+  let m = glm.translate m $ glm.vec3 $* t.translation in
+  let m = glm.rotate m t.rotation.(2) $ glm.vec3 0 0 1 in
+  let m = glm.rotate m t.rotation.(1) $ glm.vec3 0 1 0 in
+  let m = glm.rotate m t.rotation.(0) $ glm.vec3 1 0 0 in
+  glm.scale m $ glm.vec3 $* t.scale
 
-def cameraMatrices cam =
+def _cameraMatrices cam =
   let [yaw, pitch, roll] = cam.orientation in
   let fx = math.sin yaw * math.cos pitch in
   let fy = math.cos yaw * math.cos pitch in
@@ -290,15 +306,20 @@ def cameraMatrices cam =
     0.0 - rightY * math.sin roll,
     math.cos roll
   ] in
-  let view = glm.lookAt (glm.vec3 $* cam.position) (glm.vec3 $* target) (glm.vec3 $* up) in
-  let proj = glm.perspective (math.radians cam.fov) cam.aspect cam.near cam.far in
+  let view = glm.lookAt
+    (glm.vec3 $* cam.position)
+    (glm.vec3 $* target)
+    (glm.vec3 $* up)
+  in
+  let proj = glm.perspective
+    (math.radians cam.fov) cam.aspect cam.near cam.far in
   [view, proj]
 
 # --- UBO packing (std140 layout, 336 bytes) ---
 
-def uboTail = struct.Struct "<2f2f3ff3fi3ff3ff"
+def _UBO_TAIL = struct.Struct "<2f2f3ff3fi3ff3ff"
 
-def packUbo model view proj mvp viewport camPos time ambient light =
+def _packUbo model view proj mvp viewport camPos time ambient light =
   let vw = float viewport.(2) in
   let vh = float viewport.(3) in
   let [cx, cy, cz] = camPos in
@@ -310,7 +331,7 @@ def packUbo model view proj mvp viewport camPos time ambient light =
       [ldx, ldy, ldz, lcx, lcy, lcz, light.intensity, 1]
     else [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0]
   in
-  let tail = uboTail.pack
+  let tail = _UBO_TAIL.pack
     vw vh 0.0 0.0
     cx cy cz time ax ay az hl
     ldx ldy ldz 0.0 lcx lcy lcz li
@@ -320,65 +341,67 @@ def packUbo model view proj mvp viewport camPos time ambient light =
 
 # --- VAO building ---
 
-def layoutStride layout =
+def _layoutStride layout =
   reduce (fun acc [_, fmt] ->
-    acc + int (subs fmt 0 (len fmt - 1)) * 4
+    acc + int (subs fmt 0 $ len fmt - 1) * 4
   ) 0 layout
 
-def processLayout prog layout =
+def _processLayout prog layout =
   let [attrs, fmts] = reduce (fun [attrs, fmts] [attr, fmt] ->
     if contains? prog attr
     then [conj attrs attr, conj fmts fmt]
-    else [attrs, conj fmts ("/" + fmt)]
+    else [attrs, conj fmts $ "/" + fmt]
   ) [[], []] layout
   in [attrs, " ".join fmts]
 
-def buildVao ctx prog geom instancing:nil =
-  let [attrs, fmtStr] = processLayout prog geom.layout in
-  let entry = py.tuple $ concat [geom.vertexBuffer._buf, fmtStr] attrs in
-  let content = py.list [entry] in
-  let _ = when some? instancing do
-    let [instAttrs, instFmtStr] = processLayout prog instancing.layout in
-    let instEntry = py.tuple $ concat [instancing.buffer._buf, instFmtStr + "/i"] instAttrs in
-    content.append instEntry
-  in
-  if some? geom.indexBuffer
-  then ctx.vertex_array prog content index_buffer:geom.indexBuffer._buf
-  else ctx.vertex_array prog content
+def _buildVao ctx prog geom instancing:nil =
+  let [attrs, fmt] = _processLayout prog geom.layout in
+  let content = concat
+    [concat [geom.vertexBuffer._buf, fmt] attrs]
+    when some? instancing do
+      let [instAttrs, instFmt] = _processLayout prog instancing.layout
+      in [concat [instancing.buffer._buf, instFmt + "/i"] instAttrs]
+  in ctx.vertex_array prog content $**
+    if some? geom.indexBuffer
+      then {index_buffer:geom.indexBuffer._buf}
+      else {}
 
 # --- Render ---
 
 def render ctx camera environment node =
   let vp = environment.viewport in
   let cc = environment.clearColor in
-  let _ = set! ctx.viewport vp in
-  let _ = ctx.enable moderngl.DEPTH_TEST in
-  let _ = if environment.cullFace
-    then ctx.enable moderngl.CULL_FACE
-    else ctx.disable moderngl.CULL_FACE
-  in
-  let _ = ctx.clear cc.(0) cc.(1) cc.(2) (if len cc > 3 then cc.(3) else 1.0) in
-  let [view, proj] = cameraMatrices camera in
+  let [view, proj] = _cameraMatrices camera in
   let ubo =
     if py.hasattr ctx "_ubo" then ctx._ubo
     else set! ctx._ubo (ctx.buffer reserve:336)
   in (
+    set! ctx.viewport vp;
+    ctx.enable moderngl.DEPTH_TEST;
+    if environment.cullFace
+      then ctx.enable moderngl.CULL_FACE
+      else ctx.disable moderngl.CULL_FACE;
+    # ctx.clear $* if len cc == 3 then conj cc 1.0 else cc;
+    ctx.clear $* case
+      | len cc == 3 -> conj (vec cc) 1.0
+      | len cc == 4 -> cc
+      | _ -> raise $ ValueError "clearColor must be a vec3 or vec4";
     ubo.bind_to_uniform_block 0;
-    walk ctx node (glm.mat4 ()) view proj camera environment ubo
+    _walk ctx node (glm.mat4 ()) view proj camera environment ubo
   )
 
-def walk ctx node parentWorld view proj camera env ubo =
-  let world = parentWorld * transformMatrix node.transform in (
+def _walk ctx node parentWorld view proj camera env ubo =
+  let world = parentWorld * _transformMatrix node.transform in (
     when some? node.drawable do
-      draw node.drawable world view proj camera env ubo;
+      _draw node.drawable world view proj camera env ubo;
     for! child in node.children do
-      walk ctx child world view proj camera env ubo
+      _walk ctx child world view proj camera env ubo
   )
 
-def draw drw world view proj camera env ubo =
+def _draw drw world view proj camera env ubo =
   let prog = drw.material.shader in
   let mvp = proj * view * world in
-  let uboData = packUbo world view proj mvp env.viewport
+  let uboData = _packUbo world view proj mvp env.viewport
     camera.position env.time env.ambient env.light
   in (
     ubo.write uboData;
@@ -391,7 +414,7 @@ def draw drw world view proj camera env ubo =
         set! prog.("u_texture").value 0
     );
     if some? drw.instancing then
-      let stride = layoutStride drw.instancing.layout in
+      let stride = _layoutStride drw.instancing.layout in
       let instances = drw.instancing.buffer.sizeBytes () // stride in
       drw.vao.render drw.geometry.primitive instances:instances
     else
