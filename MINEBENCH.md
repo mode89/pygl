@@ -94,7 +94,7 @@ Functional/declarative style. Immutable data throughout; side effects only at th
 - `generate_chunk_heightmap(cx, cy, perm)` — returns `array.array("i")` heightmap for one chunk.
 - `generate_chunk_blocks(heightmap)` — returns `bytearray` block array from heightmap.
 - `generate_chunk(cx, cy, perm)` — combines the above, returns `Chunk` with `drawable=None`.
-- `build_chunk_mesh(chunk, seed)` — iterates solid blocks, emits vertices for exposed faces (chunk-local only). Returns flat vertex list.
+- `build_chunk_mesh(chunk, seed)` — iterates solid blocks, emits vertices for exposed faces (chunk-local only). Returns packed bytes, or `b""` if no visible faces.
 - `_generate_and_mesh(cx, cy, perm, seed)` — worker function: generates chunk + builds mesh. Returns `(chunk, verts)`.
 - `_player_look_dir(player)` — returns `(dx, dy, dz)` unit direction from yaw/pitch.
 - `_raycast(state, origin, direction, max_dist)` — DDA voxel traversal, returns `(bx, by, bz)` or `None`.

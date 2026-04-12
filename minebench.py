@@ -257,7 +257,7 @@ def build_chunk_mesh(chunk, seed):  # pylint: disable=too-many-locals
                 btype = blocks[_chunk_block_idx(lx, ly, lz)]
                 if btype != Block.AIR:
                     emit_block(lx, ly, lz, btype)
-    return verts
+    return gl.pack(verts) if verts else b""
 
 
 def _generate_and_mesh(cx, cy, perm, seed):
@@ -403,7 +403,7 @@ def _update_chunks(state, ctx, max_meshes=16):
     def upload_mesh(verts):
         if not verts:
             return "empty"
-        vbuf = gl.Buffer(ctx, gl.pack(verts))
+        vbuf = gl.Buffer(ctx, verts)
         geom = gl.Geometry(
             layout=(
                 ("in_position", "3f"),
