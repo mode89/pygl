@@ -35,7 +35,7 @@ def init(self):
 
     # Dynamic instance buffer
     self.instance_buf = gl.Buffer(
-        self.ctx, [0.0] * MAX_PARTICLES * 6, dynamic=True,
+        self.ctx, gl.pack([0.0] * MAX_PARTICLES * 6), dynamic=True,
     )
     self.instance_buf.setSizeBytes(0)
 
@@ -76,7 +76,7 @@ def render(self, _time, _frame_time):
     # Upload instance data
     count = self.particles.count
     if count > 0:
-        self.instance_buf.updateBytes(self.particles.pack())
+        self.instance_buf.update(self.particles.pack())
     self.instance_buf.setSizeBytes(count * INSTANCE_STRIDE)
 
     drw = self.screen_drawable if self.screen_space else self.world_drawable

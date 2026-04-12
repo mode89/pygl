@@ -53,7 +53,7 @@ CUBE_VERTICES = [
 
 
 def init(self):
-    vbuf = gl.Buffer(self.ctx, CUBE_VERTICES)
+    vbuf = gl.Buffer(self.ctx, gl.pack(CUBE_VERTICES))
     geom = gl.Geometry(
         layout=(("in_position", "3f"), ("in_normal", "3f")),
         primitive=gl.TRIANGLES,

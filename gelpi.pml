@@ -52,14 +52,9 @@ class Node transform:(Transform ()) drawable:nil children:[]
 
 # --- Mutable types ---
 
-def packData data =
-  let n = len data in
-  let ch = if py.isinstance (first data) int then "i" else "f" in
-  struct.pack "<${str n}${ch}" $* data
-
 class Buffer = {
   def __init__ self ctx data dynamic:false = (
-    set! self._buf (ctx.buffer (packData data) dynamic:dynamic);
+    set! self._buf (ctx.buffer data dynamic:*);
     set! self._sizeBytes nil
   )
   def sizeBytes self =
@@ -67,11 +62,14 @@ class Buffer = {
     else self._buf.size
   def setSizeBytes self value = set! self._sizeBytes value
   def update self data offset:0 =
-    self.updateBytes (packData data) offset:(offset * 4)
-  def updateBytes self data offset:0 =
     self._buf.write data offset:offset
   def read self = self._buf.read ()
 }
+
+def pack data =
+  let n = len data in
+  let ch = if py.isinstance (first data) int then "i" else "f" in
+  struct.pack "<${str n}${ch}" $* data
 
 class Texture = {
   def __init__ self ctx size data:nil = (

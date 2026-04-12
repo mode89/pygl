@@ -157,19 +157,22 @@ Fields:
 
 ### `Buffer` (mutable reference)
 
-Mutable GPU buffer. One of two mutable types in the engine. Accepts any numeric iterable — element type is auto-detected: `int` → `int32`, `float` → `float32`.
+Mutable GPU buffer. One of two mutable types in the engine. Accepts raw `bytes` (use `pack()` to convert numeric lists).
 
 Constructor:
-- `Buffer(ctx, data, dynamic=False)` — `dynamic=True` hints frequent updates.
+- `Buffer(ctx, data, dynamic=False)` — `data` is `bytes`. `dynamic=True` hints frequent updates.
 
 Properties:
 - `size_bytes` — readable size of valid data. Returns the full underlying buffer size by default. Set to limit the valid region (e.g., for partially-filled instance buffers).
 
 Methods:
 - `update(data)` — full replacement.
-- `update(data, offset)` — partial update. Offset in elements (each element is 4 bytes).
-- `update_bytes(data, offset=0)` — write raw bytes at a byte offset.
+- `update(data, offset)` — partial update. Offset in bytes.
 - `read()` — read back the raw buffer contents.
+
+### `pack(data)` (module-level utility)
+
+Packs a non-empty list of `int` or `float` values into little-endian `bytes` (`int32` or `float32`, auto-detected from the first element).
 
 ### `Texture` (mutable reference)
 

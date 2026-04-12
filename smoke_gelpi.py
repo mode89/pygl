@@ -39,11 +39,11 @@ print("=" * 60)
 
 # Triangle: position(3f) + normal(3f) + uv(2f) = 8 floats/vertex
 # Geometry in XZ plane (vertical), facing -Y toward camera.
-tri_buf = gl.Buffer(ctx, [
+tri_buf = gl.Buffer(ctx, gl.pack([
      0.0, 0.0,  1.0,   0.0, -1.0, 0.0,   0.5, 1.0,   # top
      1.0, 0.0, -1.0,   0.0, -1.0, 0.0,   1.0, 0.0,   # bottom-right
     -1.0, 0.0, -1.0,   0.0, -1.0, 0.0,   0.0, 0.0,   # bottom-left
-], dynamic=True)
+]), dynamic=True)
 tri_geom = gl.Geometry(
     layout=(("in_position", "3f"), ("in_normal", "3f"), ("in_uv", "2f")),
     primitive=gl.TRIANGLES,
@@ -101,13 +101,13 @@ tri_node2 = gl.Node(
 )
 
 # Lines: position(3f) + color(3f), 4 vertices
-line_buf = gl.Buffer(ctx, [
+line_buf = gl.Buffer(ctx, gl.pack([
     -1.0, 0.0,  1.0,  1.0, 1.0, 1.0,
      1.0, 0.0,  1.0,  1.0, 1.0, 1.0,
     -1.0, 0.0, -1.0,  1.0, 1.0, 1.0,
      1.0, 0.0, -1.0,  1.0, 1.0, 1.0,
-], dynamic=True)
-line_ibo = gl.Buffer(ctx, [0, 1, 1, 2, 2, 3], dynamic=True)
+]), dynamic=True)
+line_ibo = gl.Buffer(ctx, gl.pack([0, 1, 1, 2, 2, 3]), dynamic=True)
 line_geom = gl.Geometry(
     layout=(("in_position", "3f"), ("in_color", "3f")),
     primitive=gl.LINES,
@@ -161,9 +161,9 @@ before_positions = [before_floats[i:i+3] for i in range(0, len(before_floats), 8
 print(f"  Triangle buffer BEFORE mutation (positions):\n{before_positions}")
 
 # Partial update: top vertex position (0,0,1) -> (1,0,1)
-tri_buf.update([1.0, 0.0, 1.0,  0.0, -1.0, 0.0,  0.5, 1.0], offset=0)
+tri_buf.update(gl.pack([1.0, 0.0, 1.0,  0.0, -1.0, 0.0,  0.5, 1.0]), offset=0)
 # Partial update: bottom-left normal (0,-1,0) -> (1,0,0)
-tri_buf.update([-1.0, 0.0, -1.0,  1.0, 0.0, 0.0,  0.0, 0.0], offset=16)
+tri_buf.update(gl.pack([-1.0, 0.0, -1.0,  1.0, 0.0, 0.0,  0.0, 0.0]), offset=64)
 
 after_raw = tri_buf.read()
 after_floats = struct.unpack(f"<{len(after_raw) // 4}f", after_raw)
@@ -172,15 +172,15 @@ print(f"  Triangle buffer AFTER mutation (positions):\n{after_positions}")
 print(f"  Buffers differ: {before_raw != after_raw}")
 
 # Full replace line vertex buffer (Y-shape) with per-vertex colors
-line_buf.update([
+line_buf.update(gl.pack([
     -1.0, 0.0,  1.0,  1.0, 0.0, 0.0,  # red
      0.0, 0.0,  0.0,  0.0, 1.0, 0.0,  # green
      1.0, 0.0,  1.0,  0.0, 0.0, 1.0,  # blue
      0.0, 0.0, -1.0,  1.0, 1.0, 0.0,  # yellow
-])
+]))
 
 # Full replace line index buffer (Y-shape)
-line_ibo.update([0, 1, 2, 1, 1, 3])
+line_ibo.update(gl.pack([0, 1, 2, 1, 1, 3]))
 
 # 4x4 black-and-white checkerboard texture
 checker = []

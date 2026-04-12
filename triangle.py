@@ -15,7 +15,7 @@ TRIANGLE_VERTICES = [
 
 
 def init(self):
-    vbuf = gl.Buffer(self.ctx, TRIANGLE_VERTICES)
+    vbuf = gl.Buffer(self.ctx, gl.pack(TRIANGLE_VERTICES))
     geom = gl.Geometry(
         layout=(("in_position", "3f"), ("in_color", "3f")),
         primitive=gl.TRIANGLES,

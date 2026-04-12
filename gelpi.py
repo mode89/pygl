@@ -61,7 +61,7 @@ class Transform:
 
 # --- Mutable types ---
 
-def _pack(data):
+def pack(data):
     n = len(data)
     assert n > 0, "data must not be empty"
     ft = type(data[0])
@@ -74,7 +74,7 @@ class Buffer:
 
     def __init__(self, ctx, data, dynamic=False):
         self._ctx = ctx
-        self._buf = ctx.buffer(_pack(data), dynamic=dynamic)
+        self._buf = ctx.buffer(data, dynamic=dynamic)
         self._size_bytes = None
 
     @property
@@ -88,10 +88,6 @@ class Buffer:
         self._size_bytes = value
 
     def update(self, data, offset=0):
-        """Write data into the buffer at the given offset (in elements)."""
-        self.update_bytes(_pack(data), offset=offset * 4)
-
-    def update_bytes(self, data, offset=0):
         """Write raw bytes into the buffer at the given byte offset."""
         self._buf.write(data, offset=offset)
 
@@ -177,14 +173,14 @@ def quad_geometry(ctx):
     return Geometry(
         layout=(("in_position", "3f"), ("in_normal", "3f"), ("in_uv", "2f")),
         primitive=TRIANGLES,
-        vertex_buffer=Buffer(ctx, [
+        vertex_buffer=Buffer(ctx, pack([
             # position          normal       uv
             -0.5, -0.5, 0.0,   0, 0, 1,    0, 0,
              0.5, -0.5, 0.0,   0, 0, 1,    1, 0,
              0.5,  0.5, 0.0,   0, 0, 1,    1, 1,
             -0.5,  0.5, 0.0,   0, 0, 1,    0, 1,
-        ]),
-        index_buffer=Buffer(ctx, [0, 1, 2, 2, 3, 0]),
+        ])),
+        index_buffer=Buffer(ctx, pack([0, 1, 2, 2, 3, 0])),
     )
 
 
