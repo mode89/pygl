@@ -7,9 +7,11 @@ from concurrent.futures import ProcessPoolExecutor, Future
 from dataclasses import dataclass, replace
 
 import array
-import moderngl_window as mglw  # pylint: disable=import-error
 
-import gelpi as gl
+import paimel
+
+gl = paimel.load_module("gelpi")
+window = paimel.load_module("window")
 
 _EXECUTOR = ProcessPoolExecutor(max_workers=16)
 
@@ -383,11 +385,11 @@ def _make_wireframe_drawable(ctx):
     verts = []
     for e in edges:
         verts.extend([float(v) for v in e])
-    vbuf = gl.Buffer(ctx, verts)
+    vbuf = gl.Buffer(ctx, gl.pack(verts))
     geom = gl.Geometry(
         layout=(("in_position", "3f"),),
         primitive=gl.LINES,
-        vertex_buffer=vbuf,
+        vertexBuffer=vbuf,
     )
     mat = gl.material(ctx, color=(1.0, 1.0, 1.0, 1.0), lit=False)
     return gl.drawable(ctx, geom, mat)
@@ -401,7 +403,7 @@ def _update_chunks(state, ctx, max_meshes=16):
     def upload_mesh(verts):
         if not verts:
             return "empty"
-        vbuf = gl.Buffer(ctx, verts)
+        vbuf = gl.Buffer(ctx, gl.pack(verts))
         geom = gl.Geometry(
             layout=(
                 ("in_position", "3f"),
@@ -409,7 +411,7 @@ def _update_chunks(state, ctx, max_meshes=16):
                 ("in_color", "3f")
             ),
             primitive=gl.TRIANGLES,
-            vertex_buffer=vbuf,
+            vertexBuffer=vbuf,
         )
         return gl.drawable(ctx, geom, state.block_material)
 
@@ -474,7 +476,7 @@ def init(ctx, seed=None):
         seed = random.randint(0, 2**32 - 1)
     rng = random.Random(seed)
     perm = tuple(_perlin_permutation(rng))
-    mat = gl.material(ctx, lit=True, vertex_color=True)
+    mat = gl.material(ctx, lit=True, vertexColor=True)
 
     px = 0.0
     py = 0.0
@@ -600,7 +602,7 @@ def render_frame(ctx, state, viewport):
     )
 
     env = gl.Environment(
-        clear_color=(0.53, 0.81, 0.92, 1.0),
+        clearColor=(0.53, 0.81, 0.92, 1.0),
         ambient=(0.3, 0.3, 0.3),
         viewport=viewport,
         light=gl.DirectLight(
@@ -608,7 +610,7 @@ def render_frame(ctx, state, viewport):
             color=(1.0, 1.0, 1.0),
             intensity=1.0,
         ),
-        cull_face=True,
+        cullFace=True,
     )
 
     children = []
@@ -630,59 +632,68 @@ def render_frame(ctx, state, viewport):
             drawable=state.selected_block,
         ))
 
-    scene = gl.Node(children=children)
+    scene = gl.Node(children=tuple(children))
     gl.render(ctx, camera, env, scene)
 
 
 # --- Window ---
 
-class Window(mglw.WindowConfig):
-    gl_version = (4, 3)
-    title = "minebench"
-    window_size = (800, 600)
-    samples = 4
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.wnd.mouse_exclusivity = True
-        self.ctx.gc_mode = "auto"
-        self.state = init(self.ctx, 0)
-        self.pending = []
+def _translate_key(wnd, key):
+    keys = wnd.keys
+    mapping = {
+        keys.W: Key.W, keys.A: Key.A,
+        keys.S: Key.S, keys.D: Key.D,
+        keys.SPACE: Key.SPACE,
+    }
+    return mapping.get(key)
 
-    def _translate_key(self, key):
-        keys = self.wnd.keys
-        mapping = {
-            keys.W: Key.W, keys.A: Key.A,
-            keys.S: Key.S, keys.D: Key.D,
-            keys.SPACE: Key.SPACE,
-        }
-        return mapping.get(key)
 
-    def on_key_event(self, key, action, _modifiers):
-        keys = self.wnd.keys
-        if key in (keys.LEFT_SHIFT, keys.RIGHT_SHIFT):
-            k = Key.SHIFT
-        else:
-            k = self._translate_key(key)
-        if k is None:
-            return
-        if action == keys.ACTION_PRESS:
-            self.pending.append(KeyPress(k))
-        elif action == keys.ACTION_RELEASE:
-            self.pending.append(KeyRelease(k))
+def _window_init(self):
+    self.wnd.mouse_exclusivity = True
+    self.ctx.gc_mode = "auto"
+    self.state = init(self.ctx, 0)
+    self.pending = []
 
-    def on_mouse_position_event(self, _x, _y, dx, dy):
-        self.pending.append(MouseMove(dx, dy))
 
-    def on_render(self, _time, frame_time):
-        print(f"Frame time: {frame_time * 1000:.2f} ms")
-        dt = min(frame_time, 0.05)  # cap dt to avoid physics explosions
-        self.state = step(self.ctx, self.state, self.pending, dt)
-        self.pending.clear()
+def _window_key_event(self, key, action, _modifiers):
+    keys = self.wnd.keys
+    if action == keys.ACTION_PRESS and key == keys.ESCAPE:
+        self.wnd.close()
+        return
 
-        w, h = self.wnd.buffer_size
-        render_frame(self.ctx, self.state, (0, 0, w, h))
+    if key in (keys.LEFT_SHIFT, keys.RIGHT_SHIFT):
+        mapped = Key.SHIFT
+    else:
+        mapped = _translate_key(self.wnd, key)
+    if mapped is None:
+        return
+
+    if action == keys.ACTION_PRESS:
+        self.pending.append(KeyPress(mapped))
+    elif action == keys.ACTION_RELEASE:
+        self.pending.append(KeyRelease(mapped))
+
+
+def _window_mouse_event(self, _x, _y, dx, dy):
+    self.pending.append(MouseMove(dx, dy))
+
+
+def _window_render(self, _time, frame_time):
+    print(f"Frame time: {frame_time * 1000:.2f} ms")
+    dt = min(frame_time, 0.05)  # cap dt to avoid physics explosions
+    self.state = step(self.ctx, self.state, self.pending, dt)
+    self.pending.clear()
+
+    w, h = self.wnd.buffer_size
+    render_frame(self.ctx, self.state, (0, 0, w, h))
 
 
 if __name__ == "__main__":
-    mglw.run_window_config(Window)
+    window.run(
+        init=_window_init,
+        render=_window_render,
+        key_event=_window_key_event,
+        mouse_event=_window_mouse_event,
+        title="minebench",
+    )
