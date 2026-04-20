@@ -388,7 +388,7 @@ def _make_wireframe_drawable(ctx):
     vbuf = gl.Buffer(ctx, gl.pack(verts))
     geom = gl.Geometry(
         layout=(("in_position", "3f"),),
-        primitive=gl.LINES,
+        primitive=gl.Primitive.Lines,
         vertexBuffer=vbuf,
     )
     mat = gl.material(ctx, color=(1.0, 1.0, 1.0, 1.0), lit=False)
@@ -410,7 +410,7 @@ def _update_chunks(state, ctx, max_meshes=16):
                 ("in_normal", "3f"),
                 ("in_color", "3f")
             ),
-            primitive=gl.TRIANGLES,
+            primitive=gl.Primitive.Triangles,
             vertexBuffer=vbuf,
         )
         return gl.drawable(ctx, geom, state.block_material)

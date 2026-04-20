@@ -8,14 +8,15 @@ import moderngl
 import glm
 import builtins as py
 
-# Primitive types
+# --- Types ---
 
-def TRIANGLES = moderngl.TRIANGLES
-def LINES = moderngl.LINES
-def LINE_STRIP = moderngl.LINE_STRIP
-def POINTS = moderngl.POINTS
+enum Primitive =
+  | Triangles
+  | Lines
+  | LineStrip
+  | Points
 
-# --- Data classes ---
+enum Space = Screen | World # Coordinate space
 
 class DirectLight direction color:[1.0, 1.0, 1.0] intensity:1.0
 
@@ -218,7 +219,7 @@ def drawable ctx geom mat instancing:nil =
 def quadGeometry ctx =
   Geometry
     layout:[["in_position", "3f"], ["in_normal", "3f"], ["in_uv", "2f"]]
-    primitive:TRIANGLES
+    primitive:Primitive.Triangles
     vertexBuffer:(Buffer ctx (pack [
       -0.5, -0.5, 0.0,   0, 0, 1,   0, 0,
        0.5, -0.5, 0.0,   0, 0, 1,   1, 0,
@@ -256,7 +257,7 @@ def particleMaterial
   texture:nil
   vertexColor:true
   size:1.0
-  screenSpace:false =
+  space:Space.World =
   let prog =
     if py.hasattr ctx "_particleProg" then ctx._particleProg
     else
@@ -276,7 +277,7 @@ def particleMaterial
       u_has_texture: if some? texture then 1 else 0,
       u_lit: 0,
       u_size: size,
-      u_screen_space: screenSpace,
+      u_screen_space: Space.Screen? space,
     }
 
 # --- Transform math ---
@@ -401,6 +402,7 @@ def _walk ctx node parentWorld view proj camera env ubo =
 def _draw drw world view proj camera env ubo =
   let prog = drw.material.shader in
   let mvp = proj * view * world in
+  let prim = _glPrim drw.geometry.primitive in
   let uboData = _packUbo world view proj mvp env.viewport
     camera.position env.time env.ambient env.light
   in (
@@ -416,7 +418,14 @@ def _draw drw world view proj camera env ubo =
     if some? drw.instancing then
       let stride = _layoutStride drw.instancing.layout in
       let instances = drw.instancing.buffer.sizeBytes () // stride in
-      drw.vao.render drw.geometry.primitive instances:instances
+      drw.vao.render prim instances:instances
     else
-      drw.vao.render drw.geometry.primitive
+      drw.vao.render prim
   )
+
+def _glPrim p = case
+  | Primitive.Triangles? p -> moderngl.TRIANGLES
+  | Primitive.Lines?     p -> moderngl.LINES
+  | Primitive.LineStrip? p -> moderngl.LINE_STRIP
+  | Primitive.Points?    p -> moderngl.POINTS
+  | _ -> raise $ ValueError "unknown primitive"

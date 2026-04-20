@@ -47,7 +47,7 @@ def init(self):
     self.world_drawable = gl.drawable(self.ctx, geom, world_mat, instancing)
 
     screen_mat = gl.particleMaterial(
-        self.ctx, size=SCREEN_SIZE, screenSpace=True,
+        self.ctx, size=SCREEN_SIZE, space=gl.Space.Screen,
     )
     self.screen_drawable = gl.drawable(
         self.ctx, geom, screen_mat, instancing,

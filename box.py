@@ -56,7 +56,7 @@ def init(self):
     vbuf = gl.Buffer(self.ctx, gl.pack(CUBE_VERTICES))
     geom = gl.Geometry(
         layout=(("in_position", "3f"), ("in_normal", "3f")),
-        primitive=gl.TRIANGLES,
+        primitive=gl.Primitive.Triangles,
         vertexBuffer=vbuf,
     )
     mat = gl.material(self.ctx, color=(1.0, 0.0, 0.0, 1.0), lit=True)
