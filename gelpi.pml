@@ -343,16 +343,14 @@ def _packUbo model view proj mvp viewport camPos time ambient light =
 # --- VAO building ---
 
 def _layoutStride layout =
-  reduce (fun acc [_, fmt] ->
+  reduce layout 0 fun acc [_, fmt] ->
     acc + int (subs fmt 0 $ len fmt - 1) * 4
-  ) 0 layout
 
 def _processLayout prog layout =
-  let [attrs, fmts] = reduce (fun [attrs, fmts] [attr, fmt] ->
+  let [attrs, fmts] = reduce layout [[], []] fun [attrs, fmts] [attr, fmt] ->
     if contains? prog attr
     then [conj attrs attr, conj fmts fmt]
     else [attrs, conj fmts $ "/" + fmt]
-  ) [[], []] layout
   in [attrs, " ".join fmts]
 
 def _buildVao ctx prog geom instancing:nil =
